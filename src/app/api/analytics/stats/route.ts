@@ -1,14 +1,20 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
+function safeQuery(q: any) {
+  return q.catch(() => ({ count: 0, data: [] }));
+}
+
 export async function GET() {
   try {
-    if (!supabase) return NextResponse.json({ error: 'Not configured' }, { status: 500 });
+    if (!supabase) return NextResponse.json({
+      liveViewers: 0, todayViews: 0, totalMinutes: 0, topChannels: [], hourlyData: [],
+    });
 
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
 
-    const [liveViewersRes, todayViewsRes, totalSessionsRes, topChannelsRes, hourlyRes] = await Promise.all([
+    const results = await Promise.allSettled([
       supabase.from('view_sessions').select('id', { count: 'exact', head: true }).eq('is_active', true),
       supabase.from('view_sessions').select('id', { count: 'exact', head: true }).gte('started_at', todayStart),
       supabase.from('view_sessions').select('duration_seconds').not('ended_at', 'is', null),
@@ -16,13 +22,18 @@ export async function GET() {
       supabase.from('analytics_events').select('created_at').eq('event_type', 'play').gte('created_at', todayStart),
     ]);
 
-    const liveViewers = liveViewersRes.count || 0;
-    const todayViews = todayViewsRes.count || 0;
+    const getCount = (r: PromiseSettledResult<any>, fallback = 0) =>
+      r.status === 'fulfilled' ? (r.value.count ?? fallback) : fallback;
+    const getData = (r: PromiseSettledResult<any>) =>
+      r.status === 'fulfilled' ? (r.value.data ?? []) : [];
 
-    const totalSessions = totalSessionsRes.data || [];
+    const liveViewers = getCount(results[0]);
+    const todayViews = getCount(results[1]);
+    const totalSessions = getData(results[2]);
     const totalMinutes = Math.round(totalSessions.reduce((sum: number, s: any) => sum + (s.duration_seconds || 0), 0) / 60);
+    const topRows = getData(results[3]);
+    const hourlyData = getData(results[4]);
 
-    const topRows = topChannelsRes.data || [];
     const channelMap: Record<number, { views: number; minutes: number }> = {};
     topRows.forEach((r: any) => {
       if (!channelMap[r.channel_id]) channelMap[r.channel_id] = { views: 0, minutes: 0 };
@@ -41,15 +52,11 @@ export async function GET() {
       if (channels) channels.forEach((c: any) => { channelNames[c.id] = c.name; });
     }
 
-    const hourlyData = hourlyRes.data || [];
     const hourlyMap: Record<string, number> = {};
-    for (let h = 0; h < 24; h++) {
-      hourlyMap[`${h}:00`] = 0;
-    }
+    for (let h = 0; h < 24; h++) hourlyMap[`${h}:00`] = 0;
     hourlyData.forEach((e: any) => {
       const d = new Date(e.created_at);
-      const hour = d.getHours();
-      hourlyMap[`${hour}:00`] = (hourlyMap[`${hour}:00`] || 0) + 1;
+      hourlyMap[`${d.getHours()}:00`] = (hourlyMap[`${d.getHours()}:00`] || 0) + 1;
     });
 
     return NextResponse.json({
@@ -59,8 +66,9 @@ export async function GET() {
       topChannels: topChannels.map(c => ({ ...c, name: channelNames[c.channelId] || `Channel #${c.channelId}` })),
       hourlyData: Object.entries(hourlyMap).map(([hour, count]) => ({ hour, count })),
     });
-  } catch (e: any) {
-    console.error('Stats error:', e);
-    return NextResponse.json({ error: 'Failed to load stats' }, { status: 500 });
+  } catch {
+    return NextResponse.json({
+      liveViewers: 0, todayViews: 0, totalMinutes: 0, topChannels: [], hourlyData: [],
+    });
   }
 }
