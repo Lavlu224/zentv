@@ -1,6 +1,13 @@
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
+import 'dotenv/config';
 import fs from 'fs/promises';
 import path from 'path';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const supabase = supabaseUrl && supabaseKey
+  ? createClient(supabaseUrl, supabaseKey)
+  : null;
 
 async function importChannelsFromFile(filePath: string) {
   const content = await fs.readFile(filePath, 'utf-8');
@@ -14,10 +21,10 @@ async function importChannelsFromFile(filePath: string) {
 
   console.log(`Found ${channels.length} channels in ${filePath}`);
 
-  if (!supabase) {
-    console.error('Supabase not configured');
-    return { added: 0, skipped: 0, errors: channels.length };
-  }
+    if (!supabase) {
+      console.error('Supabase not configured. Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in .env');
+      return { added: 0, skipped: 0, errors: channels.length };
+    }
 
   let added = 0;
   let skipped = 0;
@@ -100,11 +107,12 @@ async function main() {
   const files = ['bangla-channels.json', 'channels.json'];
   for (const file of files) {
     const filePath = path.join(channelsDir, file);
-    if (fs.realpathSync(filePath)) {
+    try {
+      await fs.access(filePath);
       console.log(`Processing ${file}...`);
       const result = await importChannelsFromFile(filePath);
       console.log(`Result: ${result.added} added, ${result.skipped} skipped, ${result.errors} errors\n`);
-    } else {
+    } catch {
       console.log(`File not found: ${file}`);
     }
   }
