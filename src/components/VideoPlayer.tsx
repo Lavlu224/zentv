@@ -224,6 +224,7 @@ export default function VideoPlayer({ src, title, channel, channelId }: VideoPla
   };
 
   const formatTime = (time: number) => {
+    if (!isFinite(time) || isNaN(time)) return '--:--';
     const minutes = Math.floor(time / 60);
     const seconds = Math.floor(time % 60);
     return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
@@ -289,14 +290,14 @@ export default function VideoPlayer({ src, title, channel, channelId }: VideoPla
             <input
               type="range"
               min="0"
-              max={duration || 100}
-              value={currentTime}
+              max={isFinite(duration) ? duration : 100}
+              value={isFinite(currentTime) ? currentTime : 0}
               onChange={handleSeek}
               className="w-full h-1 bg-white/20 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#7C3AED]"
             />
             <div className="flex justify-between text-white/60 text-[11px] sm:text-xs mt-1">
               <span className="tabular-nums">{formatTime(currentTime)}</span>
-              <span className="tabular-nums">{formatTime(duration)}</span>
+              {isFinite(duration) ? <span className="tabular-nums">{formatTime(duration)}</span> : <span className="text-[#22C55E] font-semibold">LIVE</span>}
             </div>
           </div>
 
