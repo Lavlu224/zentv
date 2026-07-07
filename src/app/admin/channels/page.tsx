@@ -196,8 +196,11 @@ export default function AdminChannels() {
           if (Hls.isSupported()) {
             const proxyUrl = `/api/proxy?url=${encodeURIComponent(streamUrl)}`;
             const hls = new Hls({
-              startLevel: 0, abrEwmaDefaultEstimate: 500000,
-              maxMaxBufferLength: 5, maxBufferLength: 3, lowLatencyMode: true,
+              startLevel: -1, abrEwmaDefaultEstimate: 2000000,
+              maxMaxBufferLength: 120, maxBufferLength: 60, backBufferLength: 60,
+              liveSyncDurationCount: 7, liveMaxLatencyDurationCount: 10, lowLatencyMode: false,
+              enableWorker: true, startFragPrefetch: true, maxStarvationDelay: 10,
+              fragLoadingTimeOut: 30000, manifestLoadingTimeOut: 30000,
             });
             hls.loadSource(proxyUrl);
             hls.attachMedia(video);
@@ -377,12 +380,19 @@ export default function AdminChannels() {
           if (Hls.isSupported()) {
             const proxyUrl = `/api/proxy?url=${encodeURIComponent(form.streamUrl)}`;
             const hls = new Hls({
-              startLevel: 0,
-              abrEwmaDefaultEstimate: 500000,
-              maxMaxBufferLength: 30,
-              maxBufferLength: 15,
-              backBufferLength: 30,
-              lowLatencyMode: true,
+              startLevel: -1,
+              abrEwmaDefaultEstimate: 2000000,
+              maxMaxBufferLength: 120,
+              maxBufferLength: 60,
+              backBufferLength: 60,
+              liveSyncDurationCount: 7,
+              liveMaxLatencyDurationCount: 10,
+              lowLatencyMode: false,
+              enableWorker: true,
+              startFragPrefetch: true,
+              maxStarvationDelay: 10,
+              fragLoadingTimeOut: 30000,
+              manifestLoadingTimeOut: 30000,
             });
             hls.loadSource(proxyUrl);
             hls.attachMedia(video);

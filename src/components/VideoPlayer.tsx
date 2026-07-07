@@ -53,12 +53,31 @@ export default function VideoPlayer({ src, title, channel, channelId }: VideoPla
           if (Hls.isSupported()) {
             const proxyUrl = `/api/proxy?url=${encodeURIComponent(src)}`;
             const hls = new Hls({
-              startLevel: 0,
-              abrEwmaDefaultEstimate: 500000,
-              maxMaxBufferLength: 30,
-              maxBufferLength: 15,
-              backBufferLength: 30,
-              lowLatencyMode: true,
+              startLevel: -1,
+              abrEwmaDefaultEstimate: 2000000,
+              abrEwmaFastVoD: 3.0,
+              abrEwmaSlowVoD: 5.0,
+              abrBandWidthFactor: 0.8,
+              abrBandWidthUpFactor: 0.7,
+              maxMaxBufferLength: 120,
+              maxBufferLength: 60,
+              backBufferLength: 60,
+              liveSyncDurationCount: 7,
+              liveMaxLatencyDurationCount: 10,
+              liveDurationInfinity: true,
+              lowLatencyMode: false,
+              enableWorker: true,
+              startFragPrefetch: true,
+              highBufferWatchdogPeriod: 2,
+              nudgeOffset: 0.5,
+              nudgeMaxRetry: 10,
+              maxStarvationDelay: 10,
+              starvationDelay: 5,
+              maxLoadingDelay: 8,
+              fragLoadingTimeOut: 30000,
+              manifestLoadingTimeOut: 30000,
+              levelLoadingTimeOut: 30000,
+              capLevelToPlayerSize: true,
             });
             hls.loadSource(proxyUrl);
             hls.attachMedia(video);
